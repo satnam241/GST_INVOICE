@@ -210,9 +210,9 @@ def google_mail_callback(
             <div class="card">
                 <span class="badge">Connected</span>
                 <h1>Google Mail Connected!</h1>
-                <p>Aapka Google account Simple Invoicing ke saath kamyabi se connect ho gaya hai:</p>
+                <p>Your Google account has been successfully connected to Simple Invoicing:</p>
                 <div class="email-box">{user_email or 'Google Account'}</div>
-                <p>Ab sabhi invoices, statements aur payment reminders is email se send honge. Aap is tab ko band kar sakte hain.</p>
+                <p>All outgoing invoices, statements, and payment reminders will now be sent from this email address. You may safely close this window.</p>
                 <a href="/" class="btn">Go to Dashboard</a>
             </div>
         </body>
