@@ -211,8 +211,16 @@ class Settings(BaseSettings):
             return False
         if self.GOOGLE_MAIL_REFRESH_TOKEN:
             return True
-        from src.services.google_mail import has_stored_token
-        return has_stored_token()
+        token_file = Path(__file__).resolve().parent.parent.parent / "google_mail_token.json"
+        if token_file.exists():
+            try:
+                import json
+                with open(token_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    return bool(data.get("refresh_token") or data.get("access_token"))
+            except Exception:
+                return False
+        return False
 
     @property
     def google_mail_smtp_configured(self) -> bool:

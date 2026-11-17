@@ -23,9 +23,12 @@ from email.utils import formataddr
 from pathlib import Path
 
 import httpx
-from src.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+def _settings():
+    from src.core.config import settings
+    return settings
 
 # Token file for storing OAuth credentials locally
 TOKEN_FILE = Path(__file__).resolve().parent.parent.parent / "google_mail_token.json"
@@ -51,7 +54,7 @@ def _read_token_file() -> dict:
 
 def has_stored_token() -> bool:
     """Check if a refresh token or valid access token is available."""
-    if settings.GOOGLE_MAIL_REFRESH_TOKEN:
+    if _settings().GOOGLE_MAIL_REFRESH_TOKEN:
         return True
     data = _read_token_file()
     return bool(data.get("refresh_token") or data.get("access_token"))
@@ -59,8 +62,8 @@ def has_stored_token() -> bool:
 
 def get_stored_refresh_token() -> str | None:
     """Return the refresh token from settings or local token file."""
-    if settings.GOOGLE_MAIL_REFRESH_TOKEN:
-        return settings.GOOGLE_MAIL_REFRESH_TOKEN
+    if _settings().GOOGLE_MAIL_REFRESH_TOKEN:
+        return _settings().GOOGLE_MAIL_REFRESH_TOKEN
     data = _read_token_file()
     return data.get("refresh_token")
 
@@ -103,14 +106,14 @@ def clear_stored_tokens() -> None:
 
 def is_google_mail_configured() -> bool:
     """Check if either Google OAuth2 or Google SMTP credentials are configured."""
-    return settings.google_mail_configured
+    return _settings().google_mail_configured
 
 
 def get_google_mail_mode() -> str:
     """Return the active Google Mail sending mode: 'oauth', 'smtp', or 'none'."""
-    if settings.google_mail_oauth_configured:
+    if _settings().google_mail_oauth_configured:
         return "oauth"
-    if settings.google_mail_smtp_configured:
+    if _settings().google_mail_smtp_configured:
         return "smtp"
     return "none"
 
@@ -118,8 +121,8 @@ def get_google_mail_mode() -> str:
 def get_sender_email() -> str:
     """Return the sender email address to use for Google Mail."""
     return (
-        settings.GOOGLE_MAIL_FROM_EMAIL
-        or settings.GOOGLE_MAIL_USER
+        _settings().GOOGLE_MAIL_FROM_EMAIL
+        or _settings().GOOGLE_MAIL_USER
         or get_stored_email()
         or ""
     )
@@ -127,7 +130,7 @@ def get_sender_email() -> str:
 
 def get_sender_name() -> str:
     """Return the default sender name for Google Mail."""
-    return settings.GOOGLE_MAIL_FROM_NAME or "Simple Invoicing"
+    return _settings().GOOGLE_MAIL_FROM_NAME or "Simple Invoicing"
 
 
 def _refresh_oauth_access_token() -> str:
@@ -139,8 +142,8 @@ def _refresh_oauth_access_token() -> str:
     if _cached_access_token and now < (_token_expires_at - 60):
         return _cached_access_token
 
-    client_id = settings.effective_google_client_id
-    client_secret = settings.effective_google_client_secret
+    client_id = _settings().effective_google_client_id
+    client_secret = _settings().effective_google_client_secret
     refresh_token = get_stored_refresh_token()
 
     if not client_id or not client_secret:
@@ -225,11 +228,11 @@ def _send_via_gmail_api(msg: Message, recipients: list[str]) -> None:
 
 def _send_via_google_smtp(msg: Message, recipients: list[str]) -> None:
     """Send an email using Google SMTP (smtp.gmail.com)."""
-    host = settings.GOOGLE_MAIL_HOST or "smtp.gmail.com"
-    port = settings.GOOGLE_MAIL_PORT or 587
-    user = settings.GOOGLE_MAIL_USER
-    password = settings.GOOGLE_MAIL_APP_PASSWORD or ""
-    use_starttls = settings.GOOGLE_MAIL_USE_STARTTLS
+    host = _settings().GOOGLE_MAIL_HOST or "smtp.gmail.com"
+    port = _settings().GOOGLE_MAIL_PORT or 587
+    user = _settings().GOOGLE_MAIL_USER
+    password = _settings().GOOGLE_MAIL_APP_PASSWORD or ""
+    use_starttls = _settings().GOOGLE_MAIL_USE_STARTTLS
 
     if not user or not password:
         raise RuntimeError("Google Mail SMTP requires GOOGLE_MAIL_USER and GOOGLE_MAIL_APP_PASSWORD")
