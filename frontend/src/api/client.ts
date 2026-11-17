@@ -9,7 +9,7 @@ export const apiBaseURL = baseURL;
 
 const api = axios.create({
   baseURL,
-  timeout: 10000,
+  timeout: 60000,
 });
 
 let refreshPromise: Promise<string | null> | null = null;
@@ -34,6 +34,15 @@ function readSentCompanyId(headers: unknown): string | undefined {
 }
 
 api.interceptors.request.use((config) => {
+  // Disable timeout completely for PDF generation, file downloads, and long exports
+  if (
+    config.responseType === 'blob' ||
+    config.url?.includes('/pdf') ||
+    config.url?.includes('/export')
+  ) {
+    config.timeout = 0;
+  }
+
   const token = localStorage.getItem('token');
   const activeCompanyId = localStorage.getItem('active_company_id');
   if (token) {
