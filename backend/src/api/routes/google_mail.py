@@ -35,6 +35,8 @@ GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
 def _callback_url(request: Request) -> str:
     """Build the callback redirect URL."""
     base = settings.PUBLIC_API_BASE_URL.rstrip("/") if settings.PUBLIC_API_BASE_URL else str(request.base_url).rstrip("/")
+    if base.endswith("/api"):
+        return f"{base}/google-mail/callback"
     return f"{base}/api/google-mail/callback"
 
 
