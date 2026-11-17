@@ -44,8 +44,8 @@ PROVIDERS: dict[str, ProviderSpec] = {
         configured=lambda s: s.google_auth_enabled,
         signup_allowed=lambda s: s.google_signup_enabled,
         register_kwargs=lambda s: {
-            "client_id": s.OAUTH_GOOGLE_CLIENT_ID,
-            "client_secret": s.OAUTH_GOOGLE_CLIENT_SECRET,
+            "client_id": s.effective_google_client_id,
+            "client_secret": s.effective_google_client_secret,
             # OIDC discovery: Authlib fetches the endpoints and the signing keys
             # from here, and checks the ID token's signature, exp and nonce
             # against them in authorize_access_token; iss and aud are below.
@@ -61,7 +61,7 @@ PROVIDERS: dict[str, ProviderSpec] = {
             # Google documents both spellings of its issuer.
             "iss": {"essential": True, "values": ["https://accounts.google.com", "accounts.google.com"]},
             # A token Google minted for some other app must not sign anyone in here.
-            "aud": {"essential": True, "value": s.OAUTH_GOOGLE_CLIENT_ID},
+            "aud": {"essential": True, "value": s.effective_google_client_id},
         },
     ),
 }

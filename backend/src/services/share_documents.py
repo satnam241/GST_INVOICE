@@ -26,7 +26,10 @@ from datetime import date, datetime
 from decimal import Decimal
 from io import BytesIO
 
-import weasyprint
+try:
+    import weasyprint
+except (ImportError, OSError):
+    weasyprint = None
 from src.services.pdf_render import safe_url_fetcher
 from fastapi import HTTPException, Request
 from sqlalchemy import func
@@ -385,6 +388,8 @@ def invoice_upi_payment(
 # ---------------------------------------------------------------------------
 
 def _to_pdf(html: str) -> BytesIO:
+    if weasyprint is None:
+        raise HTTPException(status_code=500, detail="PDF generation requires GTK3 runtime on Windows.")
     return BytesIO(weasyprint.HTML(string=html, url_fetcher=safe_url_fetcher).write_pdf())
 
 

@@ -20,6 +20,7 @@ from src.mcp_server import register_mcp
 from src.api.routes import tax_withholding as tax_withholding_routes
 from src.api.routes import tds as tds_routes
 from src.api.routes import tcs_reports as tcs_reports_routes
+from src.api.routes import google_mail as google_mail_routes
 from src.services.inventory_service import InsufficientStockError
 from src.core.analytics import (
     bind_request,
@@ -327,6 +328,7 @@ app.include_router(tcs_reports_routes.router, prefix="/api/reports/tcs-collected
 app.include_router(company_accounts_routes.router, prefix="/api/company-accounts", tags=["company-accounts"])
 app.include_router(payments.router, prefix="/api/payments", tags=["payments"])
 app.include_router(smtp.router, prefix="/api/smtp-configs", tags=["smtp"])
+app.include_router(google_mail_routes.router, prefix="/api/google-mail", tags=["google-mail"])
 app.include_router(email_routes.router, prefix="/api/email", tags=["email"])
 app.include_router(shortcuts.router, prefix="/api/shortcuts", tags=["shortcuts"])
 app.include_router(invoice_series_routes.router, prefix="/api/invoice-series", tags=["invoice-series"])

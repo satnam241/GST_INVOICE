@@ -4,6 +4,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy.orm import Session
 
@@ -250,3 +251,47 @@ def test_smtp_template(
         return {"detail": f"Test template email '{payload.template_name}' sent successfully to {payload.to}"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to send template test email: {str(e)}")
+
+
+class GoogleMailTestRequest(BaseModel):
+    to: str
+
+
+@router.get("/google-mail-status", response_model=dict)
+def get_google_mail_status(
+    _: User = Depends(require_platform_admin(UserRole.admin)),
+):
+    from src.core.config import settings
+    from src.services.google_mail import get_google_mail_mode, get_sender_email, get_sender_name
+
+    mode = get_google_mail_mode()
+    return {
+        "configured": settings.google_mail_configured,
+        "mode": mode,
+        "sender_email": get_sender_email(),
+        "from_name": get_sender_name(),
+    }
+
+
+@router.post("/test-google-mail", response_model=dict)
+def test_google_mail_endpoint(
+    payload: GoogleMailTestRequest,
+    _: User = Depends(require_platform_admin(UserRole.admin)),
+):
+    from src.core.config import settings
+    from src.services.google_mail import send_test_google_mail
+
+    if not settings.google_mail_configured:
+        raise HTTPException(
+            status_code=400,
+            detail="Google Mail is not configured. Please fill in your Google Mail settings in the .env file.",
+        )
+
+    try:
+        send_test_google_mail(payload.to.strip())
+        return {"detail": f"Test email sent successfully via Google Mail to {payload.to.strip()}."}
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to send test email via Google Mail: {str(exc)}",
+        )

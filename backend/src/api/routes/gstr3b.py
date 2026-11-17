@@ -9,7 +9,10 @@ import csv
 from datetime import date, datetime
 from io import BytesIO, StringIO
 
-import weasyprint
+try:
+    import weasyprint
+except (ImportError, OSError):
+    weasyprint = None
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -200,6 +203,8 @@ def gstr3b_export_pdf(
         company_gstin=getattr(active_company, "gst", None),
         generated_at=datetime.now(),
     )
+    if weasyprint is None:
+        raise HTTPException(status_code=500, detail="PDF generation requires GTK3 runtime on Windows.")
     pdf_bytes = weasyprint.HTML(string=html, url_fetcher=safe_url_fetcher).write_pdf()
     track("gstr3b_exported", distinct_id_for(current_user), {"format": "pdf", "period_type": period.kind})
     return StreamingResponse(

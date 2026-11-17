@@ -154,6 +154,25 @@ class Settings(BaseSettings):
     # spends the same relay allowance and sender reputation.
     TENANT_EMAIL_DAILY_LIMIT: int = 50
 
+    # --- Google Mail / Google Cloud Console Gmail Configuration ---
+    # Method 1: Google Cloud Console - Gmail API (OAuth 2.0)
+    GOOGLE_CLIENT_ID: str | None = None
+    GOOGLE_CLIENT_SECRET: str | None = None
+    GOOGLE_MAIL_CLIENT_ID: str | None = None
+    GOOGLE_MAIL_CLIENT_SECRET: str | None = None
+    GOOGLE_MAIL_REFRESH_TOKEN: str | None = None
+
+    # Method 2: Google Mail SMTP (with Google Account App Password or Workspace relay)
+    GOOGLE_MAIL_USER: str | None = None
+    GOOGLE_MAIL_APP_PASSWORD: str | None = None
+    GOOGLE_MAIL_HOST: str = "smtp.gmail.com"
+    GOOGLE_MAIL_PORT: int = 587
+    GOOGLE_MAIL_USE_STARTTLS: bool = True
+
+    # Common Google Mail sender settings:
+    GOOGLE_MAIL_FROM_EMAIL: str | None = None
+    GOOGLE_MAIL_FROM_NAME: str = "Simple Invoicing"
+
     # Sign in with Google. Both must be set for the provider to be offered.
     OAUTH_GOOGLE_CLIENT_ID: str | None = None
     OAUTH_GOOGLE_CLIENT_SECRET: str | None = None
@@ -178,14 +197,40 @@ class Settings(BaseSettings):
         return self.DEPLOYMENT_MODE == "shared_hosting"
 
     @property
+    def effective_google_client_id(self) -> str | None:
+        return self.GOOGLE_MAIL_CLIENT_ID or self.GOOGLE_CLIENT_ID or self.OAUTH_GOOGLE_CLIENT_ID
+
+    @property
+    def effective_google_client_secret(self) -> str | None:
+        return self.GOOGLE_MAIL_CLIENT_SECRET or self.GOOGLE_CLIENT_SECRET or self.OAUTH_GOOGLE_CLIENT_SECRET
+
+    @property
+    def google_mail_oauth_configured(self) -> bool:
+        has_client = bool(self.effective_google_client_id and self.effective_google_client_secret)
+        if not has_client:
+            return False
+        if self.GOOGLE_MAIL_REFRESH_TOKEN:
+            return True
+        from src.services.google_mail import has_stored_token
+        return has_stored_token()
+
+    @property
+    def google_mail_smtp_configured(self) -> bool:
+        return bool(self.GOOGLE_MAIL_USER and self.GOOGLE_MAIL_APP_PASSWORD)
+
+    @property
+    def google_mail_configured(self) -> bool:
+        return self.google_mail_oauth_configured or self.google_mail_smtp_configured
+
+    @property
     def password_signup_enabled(self) -> bool:
         """Email + password registration needs somewhere to send the verification mail."""
-        return self.is_shared_hosting and bool(self.PLATFORM_SMTP_HOST)
+        return self.is_shared_hosting and (bool(self.PLATFORM_SMTP_HOST) or self.google_mail_configured)
 
     @property
     def google_auth_enabled(self) -> bool:
         """Google login for existing users. Works in either mode."""
-        return bool(self.OAUTH_GOOGLE_CLIENT_ID and self.OAUTH_GOOGLE_CLIENT_SECRET)
+        return bool(self.effective_google_client_id and self.effective_google_client_secret)
 
     @property
     def google_signup_enabled(self) -> bool:
@@ -238,17 +283,23 @@ class Settings(BaseSettings):
         PLATFORM_SMTP_HOST is set. Like the MCP check above, this degrades rather
         than refusing to boot: existing users can still sign in and work.
         """
-        if self.is_shared_hosting and not self.PLATFORM_SMTP_HOST:
+        if self.is_shared_hosting and not self.PLATFORM_SMTP_HOST and not self.google_mail_configured:
             logger.warning(
                 "⚠️  Signup disabled: DEPLOYMENT_MODE=shared_hosting but "
-                "PLATFORM_SMTP_HOST is not set, so no mail can be sent. Email/password "
-                "registration and tenant email are off; the app is otherwise running "
-                "normally."
+                "neither PLATFORM_SMTP_HOST nor Google Mail is set, so no mail can be sent. "
+                "Email/password registration and tenant email are off; the app is otherwise "
+                "running normally."
             )
         return self
 
     class Config:
-        env_file = str(env_file_path)
+        env_file = (
+            str(Path(".env")),
+            str(Path(f".env.{ENVIRONMENT}")),
+            str(Path(__file__).resolve().parent.parent.parent / ".env"),
+            str(Path(__file__).resolve().parent.parent.parent / f".env.{ENVIRONMENT}"),
+            str(Path(__file__).resolve().parent.parent.parent.parent / ".env"),
+        )
         case_sensitive = False
         extra = "ignore"
 

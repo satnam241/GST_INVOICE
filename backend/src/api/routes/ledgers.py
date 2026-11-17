@@ -12,7 +12,10 @@ from sqlalchemy import case, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
-import weasyprint
+try:
+    import weasyprint
+except (ImportError, OSError):
+    weasyprint = None
 from src.services.pdf_render import safe_url_fetcher
 
 from src.api.deps import get_active_company, get_current_user, require_company_role
@@ -878,6 +881,8 @@ def download_day_book_pdf(
       currency=currency,
     )
 
+    if weasyprint is None:
+        raise HTTPException(status_code=500, detail="PDF generation requires GTK3 runtime on Windows.")
     pdf_bytes = weasyprint.HTML(string=html, url_fetcher=safe_url_fetcher).write_pdf()
     buf = BytesIO(pdf_bytes)
     filename = f"day_book_{from_date}_{to_date}.pdf"
@@ -1669,6 +1674,8 @@ def download_tax_ledger_pdf(
         currency=currency,
     )
 
+    if weasyprint is None:
+        raise HTTPException(status_code=500, detail="PDF generation requires GTK3 runtime on Windows.")
     pdf_bytes = weasyprint.HTML(string=html, url_fetcher=safe_url_fetcher).write_pdf()
     buf = BytesIO(pdf_bytes)
     filename = f"tax_ledger_{from_date}_{to_date}.pdf"
@@ -3295,6 +3302,8 @@ def gstr1_export_pdf(
 <p style="font-size: 9px; color: #888;">Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>
 </body></html>"""
 
+    if weasyprint is None:
+        raise HTTPException(status_code=500, detail="PDF generation requires GTK3 runtime on Windows.")
     pdf_bytes = weasyprint.HTML(string=html, url_fetcher=safe_url_fetcher).write_pdf()
     buf = BytesIO(pdf_bytes)
     filename = f"gstr1_{from_date}_{to_date}.pdf"

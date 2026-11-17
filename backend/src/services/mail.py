@@ -14,6 +14,7 @@ from src.models.company import CompanyProfile
 from src.models.smtp_config import SMTPConfig
 from src.models.email_log import EmailLog
 from src.services import platform_mail
+from src.services.google_mail import send_google_mail
 
 logger = logging.getLogger(__name__)
 
@@ -218,8 +219,44 @@ async def send_email(
         sent_by_user_id=sent_by_user_id,
     )
     reserved = False
+    used_google = False
 
-    if settings.is_shared_hosting and not use_smtp_config:
+    # Check if Google Mail is configured
+    has_active_db_smtp = False
+    if not settings.is_shared_hosting or use_smtp_config:
+        try:
+            has_active_db_smtp = db.query(SMTPConfig).filter(SMTPConfig.is_active.is_(True)).first() is not None
+        except Exception:
+            has_active_db_smtp = False
+
+    if settings.google_mail_configured and not has_active_db_smtp:
+        used_google = True
+        company = None
+        if company_id is not None:
+            try:
+                company = db.query(CompanyProfile).filter(CompanyProfile.id == company_id).first()
+            except Exception:
+                company = None
+
+        from_email = settings.GOOGLE_MAIL_FROM_EMAIL or settings.GOOGLE_MAIL_USER or ""
+        from_name = company.name if (company and company.name) else settings.GOOGLE_MAIL_FROM_NAME
+        reply_to = company.email if (company and company.email) else None
+
+        msg = _build_message(
+            to=to,
+            subject=subject,
+            html_body=html_body,
+            from_email=from_email,
+            from_name=from_name,
+            attachments=attachments,
+            cc=cc,
+            reply_to=reply_to,
+        )
+        recipients = [to]
+        if cc:
+            recipients.extend([email.strip() for email in cc if email.strip()])
+        deliver_args = (send_google_mail, msg, recipients)
+    elif settings.is_shared_hosting and not use_smtp_config:
         msg = _build_platform_message(db, to, subject, html_body, attachments, cc, company_id)
         _reserve_daily_send(db, company_id, log_entry)
         reserved = True
@@ -259,9 +296,10 @@ async def send_email(
         db.rollback()
 
     if exc_to_raise is not None:
-        message = (
-            "The email could not be sent. Please try again later."
-            if reserved
-            else "Could not send the email. Check the SMTP settings."
-        )
+        if reserved:
+            message = "The email could not be sent. Please try again later."
+        elif used_google:
+            message = f"Could not send email via Google Mail. Check your Google Mail credentials in .env: {exc_to_raise}"
+        else:
+            message = "Could not send the email. Check the SMTP settings."
         raise RuntimeError(message) from exc_to_raise

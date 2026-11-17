@@ -22,6 +22,9 @@ from src.models.email_log import EmailLog
 from src.models.company_term import CompanyTerm
 from src.models.eway_bill import EwayBillTransporter
 from src.models.api_key import ApiKey
+from src.models.credit_note import CreditNote, CreditNoteItem
+from src.models.financial_year import FinancialYear
+from src.models.invoice_series import InvoiceSeries
 from src.models.share_link import ShareLink
 from src.models.oauth import (
     OAuthAuthRequest,

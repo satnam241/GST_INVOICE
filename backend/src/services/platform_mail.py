@@ -39,7 +39,7 @@ _jinja_env = Environment(
 
 
 def is_configured() -> bool:
-    return bool(settings.PLATFORM_SMTP_HOST)
+    return bool(settings.PLATFORM_SMTP_HOST) or settings.google_mail_configured
 
 
 def app_link(path: str, **params: str) -> str:
@@ -48,20 +48,32 @@ def app_link(path: str, **params: str) -> str:
 
 
 def _common_context() -> dict:
+    from_name = (
+        settings.GOOGLE_MAIL_FROM_NAME
+        if settings.google_mail_configured
+        else settings.PLATFORM_SMTP_FROM_NAME
+    )
     return {
         # base.html shows the brand mark when the ad is on and this name otherwise.
-        "company_name": settings.PLATFORM_SMTP_FROM_NAME,
+        "company_name": from_name,
         "ad": {"enabled": settings.SHARE_AD_ENABLED, "brand_name": settings.SHARE_AD_BRAND_NAME},
     }
 
 
 def _build_message(to: str, subject: str, text_body: str, html_body: str) -> EmailMessage:
-    from_email = settings.PLATFORM_SMTP_FROM_EMAIL or settings.PLATFORM_SMTP_USERNAME or ""
+    if settings.google_mail_configured:
+        from_email = settings.GOOGLE_MAIL_FROM_EMAIL or settings.GOOGLE_MAIL_USER or ""
+        from_name = settings.GOOGLE_MAIL_FROM_NAME or "Simple Invoicing"
+    else:
+        from_email = settings.PLATFORM_SMTP_FROM_EMAIL or settings.PLATFORM_SMTP_USERNAME or ""
+        from_name = settings.PLATFORM_SMTP_FROM_NAME
+
     msg = EmailMessage()
     msg["Subject"] = subject
-    msg["From"] = formataddr((settings.PLATFORM_SMTP_FROM_NAME, from_email))
+    msg["From"] = formataddr((from_name, from_email))
     msg["To"] = to
-    msg["Message-ID"] = make_msgid(domain=from_email.rpartition("@")[2] or None)
+    domain = from_email.rpartition("@")[2] or None
+    msg["Message-ID"] = make_msgid(domain=domain)
     # Plain text first, HTML as the preferred alternative: a client that cannot
     # render the panel still gets a working link.
     msg.set_content(text_body)
@@ -70,7 +82,16 @@ def _build_message(to: str, subject: str, text_body: str, html_body: str) -> Ema
 
 
 def _deliver(msg: Message) -> None:
-    """Hand one message to PLATFORM_SMTP_HOST. Raises on failure; callers log."""
+    """Hand one message to Google Mail or PLATFORM_SMTP_HOST. Raises on failure; callers log."""
+    if settings.google_mail_configured:
+        from src.services.google_mail import send_google_mail
+
+        recipients = [str(msg["To"])]
+        if "Cc" in msg and msg["Cc"]:
+            recipients.extend([email.strip() for email in str(msg["Cc"]).split(",") if email.strip()])
+        send_google_mail(msg, recipients)
+        return
+
     host = settings.PLATFORM_SMTP_HOST
     port = settings.PLATFORM_SMTP_PORT
     # A verifying context, unlike smtplib's default: these mails carry live
@@ -90,7 +111,7 @@ def _deliver(msg: Message) -> None:
 
 def _send(to: str, subject: str, template: str, context: dict) -> None:
     if not is_configured():
-        logger.warning("Platform mail not sent (%s): PLATFORM_SMTP_HOST is not set", template)
+        logger.warning("Platform mail not sent (%s): PLATFORM_SMTP_HOST / Google Mail is not set", template)
         return
     try:
         ctx = {**_common_context(), **context}

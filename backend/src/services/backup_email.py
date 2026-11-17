@@ -120,8 +120,11 @@ async def email_backup_archive(
         # Checked directly rather than by catching send_email's RuntimeError: an
         # install with no mail set up is an expected state, not a failure, and it
         # should not leave a scary "failed" line on the Backups page.
-        if db.query(SMTPConfig).filter(SMTPConfig.is_active.is_(True)).first() is None:
-            return EmailOutcome("skipped", "No active SMTP configuration, so no backup email was sent.")
+        if (
+            not settings.google_mail_configured
+            and db.query(SMTPConfig).filter(SMTPConfig.is_active.is_(True)).first() is None
+        ):
+            return EmailOutcome("skipped", "No active SMTP or Google Mail configuration, so no backup email was sent.")
 
         recipients = resolve_recipients(db)
         if not recipients:

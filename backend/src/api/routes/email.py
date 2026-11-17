@@ -1,7 +1,10 @@
 from datetime import date
 from pathlib import Path
 
-import weasyprint
+try:
+    import weasyprint
+except (ImportError, OSError):
+    weasyprint = None
 from src.services.pdf_render import safe_url_fetcher
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from jinja2 import Environment, FileSystemLoader
@@ -284,6 +287,8 @@ async def send_ledger_statement_email(
         entries=statement_data.entries,
         currency=currency_code,
     )
+    if weasyprint is None:
+        raise HTTPException(status_code=500, detail="PDF generation requires GTK3 runtime on Windows.")
     pdf_bytes: bytes = weasyprint.HTML(string=html_pdf, url_fetcher=safe_url_fetcher).write_pdf() or b""
 
     # Summarise invoice debits and payment credits separately for the email body
