@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { CircleHelp } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { NAV_SHORTCUTS, resolveDocumentTitle } from '../config/navigation';
 import { useShortcuts } from '../context/ShortcutsContext';
@@ -12,6 +13,7 @@ import FeedbackDialog from './FeedbackDialog';
 import FirstInvoiceTourCoach from './FirstInvoiceTourCoach';
 import InvoiceCancelDialog from './InvoiceCancelDialog';
 import ShortcutCheatSheet from './ShortcutCheatSheet';
+import SystemOnboardingModal, { SYSTEM_INTRO_KEY } from './SystemOnboardingModal';
 import ThemeToggle from './ThemeToggle';
 import UpdateAvailableToast from './UpdateAvailableToast';
 
@@ -41,6 +43,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const [cheatSheetOpen, setCheatSheetOpen] = useState(false);
   const closeCheatSheet = useCallback(() => setCheatSheetOpen(false), []);
+
+  const [guideOpen, setGuideOpen] = useState(() => {
+    try {
+      return localStorage.getItem(SYSTEM_INTRO_KEY) !== 'true';
+    } catch {
+      return false;
+    }
+  });
 
   // Rendered outside the header: its backdrop-filter would trap the fixed overlay.
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -87,6 +97,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <span className="sidebar-toggle__bar" />
           </button>
           <div style={{ flex: 1 }} />
+          <button
+            type="button"
+            className="button button--ghost button--small page-header__help"
+            onClick={() => setGuideOpen(true)}
+            aria-label="Open system guide"
+            title="Open system guide"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginRight: '8px' }}
+          >
+            <CircleHelp size={16} aria-hidden="true" />
+            <span className="page-header__help-label">System Guide</span>
+          </button>
           <ThemeToggle />
         </header>
 
@@ -105,6 +126,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <InvoiceCancelDialog />
       <UpdateAvailableToast />
       <FirstInvoiceTourCoach />
+      <SystemOnboardingModal isOpen={guideOpen} onClose={() => setGuideOpen(false)} />
     </div>
   );
 }

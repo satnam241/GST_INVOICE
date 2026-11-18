@@ -343,6 +343,25 @@ export default function CashBankPage() {
         onClearSuccess={() => setSuccess('')}
       />
 
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--line-neutral)', borderRadius: '8px', padding: '14px 18px', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '18px' }}>💡</span>
+            <div style={{ fontSize: '13px', color: 'var(--text-main)', lineHeight: '1.5' }}>
+              <strong>How Cash &amp; Bank Works:</strong> When customers pay your invoices, clicking <em>&ldquo;Record receipt&rdquo;</em> automatically credits your Cash or Bank account here. Recording payments for supplier bills deducts from your balance.
+            </div>
+          </div>
+          <button
+            type="button"
+            className="button button--ghost button--small"
+            onClick={() => navigate('/cash-bank/accounts')}
+            style={{ whiteSpace: 'nowrap' }}
+          >
+            Manage Accounts &rarr;
+          </button>
+        </div>
+      </div>
+
       <ScopeBar
         presets={(
           <DateRangePresets

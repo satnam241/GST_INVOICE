@@ -1030,6 +1030,16 @@ export default function CompanyPage() {
 
       <StatusToasts error={error} success={success} onClearError={() => setError('')} onClearSuccess={() => setSuccess('')} />
 
+      <div style={{ background: 'var(--color-primary-soft)', border: '1px solid var(--line-neutral)', borderRadius: '8px', padding: '16px 20px', marginBottom: '8px' }}>
+        <h4 style={{ margin: '0 0 6px 0', fontSize: '15px', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>🏢</span> Step 1: Set Your Business Details &amp; Logo
+        </h4>
+        <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-main)', lineHeight: '1.5' }}>
+          The details you configure here (Company Name, Address, GSTIN, Phone, and Logo) will appear on all your invoices, quotations, and generated PDFs.
+          Enter your details below, upload your logo, and click <strong>Save company</strong> at the bottom.
+        </p>
+      </div>
+
       {leaveTarget ? (
         <ConfirmDialog
           title="Save your changes?"
